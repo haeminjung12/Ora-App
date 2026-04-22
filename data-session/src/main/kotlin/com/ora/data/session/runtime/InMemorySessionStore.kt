@@ -17,8 +17,8 @@ import java.util.concurrent.ConcurrentHashMap
 
 class InMemorySessionStore : SessionStore {
     private val summaries = ConcurrentHashMap<String, SessionSummary>()
-    private val featureTraces = ConcurrentHashMap<String, MutableList<FeatureFrame>>()
-    private val researchLandmarks = ConcurrentHashMap<String, MutableList<LandmarkFrame>>()
+    private val featureTraces = ConcurrentHashMap<String, List<FeatureFrame>>()
+    private val researchLandmarks = ConcurrentHashMap<String, List<LandmarkFrame>>()
 
     override fun upsertSummary(summary: SessionSummary) {
         summaries[summary.sessionId] = summary
@@ -59,21 +59,16 @@ class InMemorySessionStore : SessionStore {
         featureTraces[sessionId] = frames
             .filter { it.sessionId == sessionId }
             .sortedBy { it.timestampMs }
-            .toMutableList()
     }
 
     override fun appendFeatureFrame(frame: FeatureFrame) {
-        val frames = featureTraces.getOrPut(frame.sessionId) { mutableListOf() }
-        synchronized(frames) {
-            frames.add(frame)
-            frames.sortBy { it.timestampMs }
+        featureTraces.compute(frame.sessionId) { _, existing ->
+            (existing.orEmpty() + frame).sortedBy { it.timestampMs }
         }
     }
 
     override fun getFeatureTrace(sessionId: String): List<FeatureFrame> =
-        featureTraces[sessionId]
-            ?.toList()
-            .orEmpty()
+        featureTraces[sessionId].orEmpty()
 
     override fun appendResearchLandmark(
         frame: LandmarkFrame,
@@ -87,24 +82,32 @@ class InMemorySessionStore : SessionStore {
             )
         }
 
-        val frames = researchLandmarks.getOrPut(frame.sessionId) { mutableListOf() }
-        synchronized(frames) {
+        var result = ResearchLandmarkWriteResult(
+            accepted = true,
+            storedFrameCount = 0,
+        )
+
+        researchLandmarks.compute(frame.sessionId) { _, existing ->
+            val nextFrames = existing.orEmpty()
             val maxFrames = policy.maxFramesPerSession
-            if (maxFrames != null && frames.size >= maxFrames) {
-                return ResearchLandmarkWriteResult(
+            if (maxFrames != null && nextFrames.size >= maxFrames) {
+                result = ResearchLandmarkWriteResult(
                     accepted = false,
-                    storedFrameCount = frames.size,
+                    storedFrameCount = nextFrames.size,
                     reason = ResearchLandmarkRejectionReason.SESSION_LIMIT_REACHED,
                 )
+                nextFrames
+            } else {
+                val updatedFrames = (nextFrames + frame).sortedBy { it.frameIndex }
+                result = ResearchLandmarkWriteResult(
+                    accepted = true,
+                    storedFrameCount = updatedFrames.size,
+                )
+                updatedFrames
             }
-
-            frames.add(frame)
-            frames.sortBy { it.frameIndex }
-            return ResearchLandmarkWriteResult(
-                accepted = true,
-                storedFrameCount = frames.size,
-            )
         }
+
+        return result
     }
 
     override fun replaceResearchLandmarks(
@@ -133,7 +136,7 @@ class InMemorySessionStore : SessionStore {
             )
         }
 
-        researchLandmarks[sessionId] = normalizedFrames.toMutableList()
+        researchLandmarks[sessionId] = normalizedFrames
         return ResearchLandmarkWriteResult(
             accepted = true,
             storedFrameCount = normalizedFrames.size,
@@ -154,9 +157,7 @@ class InMemorySessionStore : SessionStore {
 
         return ResearchLandmarkReadResult(
             accepted = true,
-            frames = researchLandmarks[sessionId]
-                ?.toList()
-                .orEmpty(),
+            frames = researchLandmarks[sessionId].orEmpty(),
         )
     }
 
