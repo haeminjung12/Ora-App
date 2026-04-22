@@ -152,8 +152,9 @@ private fun ActiveRuntimeSession(
 
     LaunchedEffect(playerController, sessionConfig.sessionId) {
         playerController.sessionEvents.collectLatest { event ->
-            if (event is SessionEvent.Stopped) {
-                cameraProvider.stop()
+            when (event) {
+                is SessionEvent.Started -> cameraProvider.start()
+                is SessionEvent.Stopped -> cameraProvider.stop()
             }
         }
     }
