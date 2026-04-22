@@ -267,6 +267,69 @@ Notes:
 - The previous hard blockers observed earlier on 2026-04-22 were resolved in the current source state: `:app` now owns both runtime components, player `READY` vs `PAUSED` mapping is coherent, and camera lifecycle state is bound to host lifecycle events.
 - No relevant tests were found in `:app`, `:feature-player`, or `:feature-camera`, so this run is build-backed and source-reviewed rather than test-backed.
 
+### 2026-04-22 - `verifier/runtime` (repeat run after GitHub publish)
+
+Scope:
+
+- `:feature-player`
+- `:feature-camera`
+- runtime-related wiring in `:app`
+
+Build command:
+
+```text
+./gradlew :feature-player:assembleDebug :feature-camera:assembleDebug :app:assembleDebug
+```
+
+Build result:
+
+- Success
+
+Verdict:
+
+- Runtime integration is acceptable for the current baseline, but it still requires contract cleanup.
+
+Findings:
+
+- Medium: The runtime spine stops camera when player stop events arrive, but it does not restart camera if playback restarts within the same session. See [app/src/main/java/com/ora/app/MainActivity.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/app/src/main/java/com/ora/app/MainActivity.kt:153), [app/src/main/java/com/ora/app/MainActivity.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/app/src/main/java/com/ora/app/MainActivity.kt:156), [feature-player/src/main/kotlin/com/ora/feature/player/runtime/Media3PlayerSessionController.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/feature-player/src/main/kotlin/com/ora/feature/player/runtime/Media3PlayerSessionController.kt:66), and [feature-player/src/main/kotlin/com/ora/feature/player/ui/VideoSessionScreen.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/feature-player/src/main/kotlin/com/ora/feature/player/ui/VideoSessionScreen.kt:213).
+
+Notes:
+
+- This repeat run was performed after the repository was published and branch tracking was established.
+- No relevant tests were found in `:app`, `:feature-player`, or `:feature-camera`, so this run is build-backed and source-reviewed rather than test-backed.
+
+### 2026-04-22 - `verifier/runtime` (post-fix recheck)
+
+Scope:
+
+- `:feature-player`
+- `:feature-camera`
+- runtime-related wiring in `:app`
+
+Build command:
+
+```text
+./gradlew :feature-player:assembleDebug :feature-camera:assembleDebug :app:assembleDebug
+```
+
+Build result:
+
+- Success
+
+Verdict:
+
+- Runtime integration is acceptable.
+
+Findings:
+
+- No runtime findings were discovered in this pass.
+
+Notes:
+
+- The prior in-session playback restart gap was resolved by symmetric player event handling in [app/src/main/java/com/ora/app/MainActivity.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/app/src/main/java/com/ora/app/MainActivity.kt:153), where `SessionEvent.Started` now starts camera and `SessionEvent.Stopped` stops it.
+- Player start/stop event semantics remain coherent with the current app wiring in [feature-player/src/main/kotlin/com/ora/feature/player/runtime/Media3PlayerSessionController.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/feature-player/src/main/kotlin/com/ora/feature/player/runtime/Media3PlayerSessionController.kt:66) and camera runtime start/stop handling in [feature-camera/src/main/kotlin/com/ora/feature/camera/runtime/CameraXFrameProvider.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/feature-camera/src/main/kotlin/com/ora/feature/camera/runtime/CameraXFrameProvider.kt:112).
+- No relevant tests were found in `:app`, `:feature-player`, or `:feature-camera`, so this run is build-backed and source-reviewed rather than test-backed.
+
 ### 2026-04-22 01:36:22 CDT - `verifier/data-ui`
 
 Scope:
@@ -298,3 +361,34 @@ Notes:
 - Raw landmark export is now part of the stable export surface in [data-session/src/main/kotlin/com/ora/data/session/export/SessionExportRecord.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/data-session/src/main/kotlin/com/ora/data/session/export/SessionExportRecord.kt:6), [data-session/src/main/kotlin/com/ora/data/session/export/SessionExportBundle.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/data-session/src/main/kotlin/com/ora/data/session/export/SessionExportBundle.kt:3), [data-session/src/main/kotlin/com/ora/data/session/export/SessionJsonExporter.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/data-session/src/main/kotlin/com/ora/data/session/export/SessionJsonExporter.kt:19), and [data-session/src/main/kotlin/com/ora/data/session/export/SessionCsvExporter.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/data-session/src/main/kotlin/com/ora/data/session/export/SessionCsvExporter.kt:4).
 - Verification is now test-backed for the repaired contract surfaces via [data-session/src/test/kotlin/com/ora/data/session/runtime/InMemorySessionStoreTest.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/data-session/src/test/kotlin/com/ora/data/session/runtime/InMemorySessionStoreTest.kt:1) and [data-session/src/test/kotlin/com/ora/data/session/export/SessionExportersTest.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/data-session/src/test/kotlin/com/ora/data/session/export/SessionExportersTest.kt:1).
 - App-level UI still does not actively consume `:data-session`, so this verdict is contract-backed and build/test-backed rather than full end-to-end UI integration coverage.
+
+### 2026-04-22 03:10:50 CDT - `verifier/data-ui`
+
+Scope:
+
+- `:data-session`
+- app-level UI/state wiring that depends on current contracts
+
+Build/test command:
+
+```text
+./gradlew :data-session:testDebugUnitTest :data-session:assembleDebug :app:assembleDebug
+```
+
+Build/test result:
+
+- Success
+
+Verdict:
+
+- The data/UI layer is acceptable.
+
+Findings:
+
+- None.
+
+Notes:
+
+- Research-mode storage boundaries remain explicit and stable in [data-session/src/main/kotlin/com/ora/data/session/contract/SessionStoreContracts.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/data-session/src/main/kotlin/com/ora/data/session/contract/SessionStoreContracts.kt:20) and [data-session/src/main/kotlin/com/ora/data/session/runtime/InMemorySessionStore.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/data-session/src/main/kotlin/com/ora/data/session/runtime/InMemorySessionStore.kt:78).
+- Verification remains test-backed for the repaired contract surfaces in [data-session/src/test/kotlin/com/ora/data/session/runtime/InMemorySessionStoreTest.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/data-session/src/test/kotlin/com/ora/data/session/runtime/InMemorySessionStoreTest.kt:13) and [data-session/src/test/kotlin/com/ora/data/session/export/SessionExportersTest.kt](/Users/haeminjung/Mac_Portable_Pack_2026-04-21/data-session/src/test/kotlin/com/ora/data/session/export/SessionExportersTest.kt:12).
+- App-level runtime wiring in `:app` changed since the previous `verifier/data-ui` run, but those changes do not introduce new `:data-session` contract churn because the app still does not actively consume session storage or summary contracts.
