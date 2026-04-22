@@ -210,6 +210,71 @@ Every verifier gets:
 - authority to report defects, regressions, missing tests, and contract mismatches
 - no authority to silently redefine product behavior
 
+## Git Rules For All Other Agents
+
+Every non-orchestrator agent must follow the same git policy.
+
+### Branching
+
+- Workers must branch from the current frozen baseline branch, not from each other.
+- Use branch names that match ownership:
+  - `instance/video-player`
+  - `instance/camera-pipeline`
+  - `instance/face-tracking`
+  - `instance/feature-engineering`
+  - `instance/data-storage`
+  - `instance/setup-calibration`
+  - `instance/webview-visualization`
+  - `instance/validation-toolkit`
+- Verifiers must not develop on worker branches.
+- If a verifier needs a branch, use a review-only branch name such as:
+  - `verifier/runtime`
+  - `verifier/data-ui`
+  - `verifier/final-integration`
+
+### Allowed Git Actions
+
+- Agents may create their own branch.
+- Agents may commit their own changes on their own branch.
+- Agents may rebase their branch onto the latest frozen baseline when instructed.
+- Agents may push their own branch after reporting build and status results.
+
+### Disallowed Git Actions
+
+- Do not merge into `main`.
+- Do not merge other worker branches.
+- Do not rewrite another agent's branch.
+- Do not force-push shared integration branches unless the orchestrator explicitly instructs it.
+- Do not amend or reword shared history just to improve commit aesthetics.
+- Do not create ad hoc integration branches without orchestrator approval.
+
+### Reporting Requirement
+
+Before asking for merge or verification, each worker must report:
+- branch name
+- `HEAD` commit hash
+- whether the working tree is clean
+- exact build or test command run
+- whether the branch was pushed and to which remote
+
+### Push Rule
+
+- If no remote exists, report that clearly and stop there.
+- Do not invent a remote name or URL.
+- Once a remote exists, push with upstream tracking:
+  - `git push -u origin <branch-name>`
+
+### Merge Readiness Rule
+
+A worker branch is considered ready for review when:
+- its write scope stayed within ownership boundaries
+- its working tree is clean
+- relevant build commands passed
+- the agent reported blockers and caveats explicitly
+
+That does not mean it is ready to merge into `main`.
+It means it is ready for verifier review and integration-branch consideration.
+
 ## Recommended Rollout
 
 1. Run `foundation/contract-owner` alone.
